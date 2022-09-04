@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-type Annotations[N ast.Node] struct {
-	Node N
+type Annotations[NN ast.Node] struct {
+	Node NN
 	Ans  []Annotation
 }
 
-func (a Annotations[N]) Get(key string) (Annotation, bool) {
+func (a Annotations[NN]) Get(key string) (Annotation, bool) {
 	for _, an := range a.Ans {
 		if an.Key == key {
 			return an, true
@@ -24,9 +24,9 @@ type Annotation struct {
 	Value string
 }
 
-func newAnnotations[N ast.Node](n N, cg *ast.CommentGroup) Annotations[N] {
+func newAnnotations[NN ast.Node](n NN, cg *ast.CommentGroup) Annotations[NN] {
 	if cg == nil || len(cg.List) == 0 {
-		return Annotations[N]{Node: n}
+		return Annotations[NN]{Node: n}
 	}
 	ans := make([]Annotation, 0, len(cg.List))
 	for _, c := range cg.List {
@@ -47,7 +47,7 @@ func newAnnotations[N ast.Node](n N, cg *ast.CommentGroup) Annotations[N] {
 			})
 		}
 	}
-	return Annotations[N]{
+	return Annotations[NN]{
 		Node: n,
 		Ans:  ans,
 	}

@@ -1,10 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"gitee.com/geektime-geekbang/geektime-go/advance/template/gen/annotation"
 	"gitee.com/geektime-geekbang/geektime-go/advance/template/gen/http"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/ioutil"
 	"os"
+	"path"
+	"runtime"
+	"strings"
 	"unicode"
 )
 
@@ -43,16 +51,30 @@ func gen(src string) error {
 // 根据 defs 来生成代码
 // src 是源代码所在目录，在测试里面它是 ./testdata
 func genFiles(src string, defs []http.ServiceDefinition) error {
-	panic("implement me")
+	for _,def := range defs{
+		bs := &bytes.Buffer{}
+		err := http.Gen(bs, def)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func parseFiles(srcFiles []string) ([]http.ServiceDefinition, error) {
 	defs := make([]http.ServiceDefinition, 0, 20)
 	for _, src := range srcFiles {
-		fmt.Println(src)
 		// 你需要利用 annotation 里面的东西来扫描 src，然后生成 file
-		panic("implement me")
 		var file annotation.File
+
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "src.go", src, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		tv := &annotation.SingleFileEntryVisitor{}
+		ast.Walk(tv, f)
+		file = tv.Get()
 
 		for _, typ := range file.Types {
 			_, ok := typ.Annotations.Get("HttpClient")
@@ -72,12 +94,32 @@ func parseFiles(srcFiles []string) ([]http.ServiceDefinition, error) {
 // 你需要利用 typ 来构造一个 http.ServiceDefinition
 // 注意你可能需要检测用户的定义是否符合你的预期
 func parseServiceDefinition(pkg string, typ annotation.Type) (http.ServiceDefinition, error) {
-	panic("implement me")
+	return http.ServiceDefinition{
+		Package: pkg,
+		Name:    "",
+		Methods: nil,
+	},nil
 }
 
 // 返回符合条件的 Go 源代码文件，也就是你要用 AST 来分析这些文件的代码
 func scanFiles(src string) ([]string, error) {
-	panic("implement me")
+	var fs []string
+	_, fileName, _, ok := runtime.Caller(0)
+	if ok {
+		pd := path.Dir(fileName)
+		dirs, err := ioutil.ReadDir(path.Join(pd, "testdata"))
+		if err != nil {
+			return nil, err
+		}
+		for _, dir := range dirs {
+			if !dir.IsDir() {
+				if strings.HasSuffix(dir.Name(), ".go") {
+					fs = append(fs, dir.Name())
+				}
+			}
+		}
+	}
+	return fs, nil
 }
 
 // underscoreName 驼峰转字符串命名，在决定生成的文件名的时候需要这个方法

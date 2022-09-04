@@ -10,11 +10,20 @@ type SingleFileEntryVisitor struct {
 }
 
 func (s *SingleFileEntryVisitor) Get() File {
-	panic("implement me")
+	if s.file != nil {
+		return s.file.Get()
+	}
+	return File{}
 }
 
 func (s *SingleFileEntryVisitor) Visit(node ast.Node) ast.Visitor {
-	panic("implement me")
+	file, ok := node.(*ast.File)
+	if ok {
+		s.file = &fileVisitor{
+			ans: newAnnotations(file, file.Doc),
+		}
+	}
+	return nil
 }
 
 type fileVisitor struct {
@@ -24,11 +33,27 @@ type fileVisitor struct {
 }
 
 func (f *fileVisitor) Get() File {
-	panic("implement me")
+	types := make([]Type, 0, len(f.types))
+	for _, t := range f.types {
+		types = append(types, t.Get())
+	}
+	return File{
+		Annotations: f.ans,
+		Types:       types,
+	}
 }
 
 func (f *fileVisitor) Visit(node ast.Node) ast.Visitor {
-	panic("implement me")
+	typ, ok := node.(*ast.TypeSpec)
+	if ok {
+		res := &typeVisitor{
+			ans:    newAnnotations(typ, typ.Doc),
+			fields: make([]Field, 0, 0),
+		}
+		f.types = append(f.types, res)
+		return res
+	}
+	return f
 }
 
 type File struct {
@@ -42,11 +67,19 @@ type typeVisitor struct {
 }
 
 func (t *typeVisitor) Get() Type {
-	panic("implement me")
+	return Type{
+		Annotations: t.ans,
+		Fields:      t.fields,
+	}
 }
 
 func (t *typeVisitor) Visit(node ast.Node) (w ast.Visitor) {
-	panic("implement me")
+	fd, ok := node.(*ast.Field)
+	if ok {
+		t.fields = append(t.fields, Field{Annotations: newAnnotations(fd, fd.Doc)})
+		return nil
+	}
+	return t
 }
 
 type Type struct {
