@@ -14,7 +14,7 @@ func TestNewMiddlewareBuilder(t *testing.T) {
 	})
 	page := `
 <html>
-	<h1>404 NOT FOUND</h1>
+	<h1>404 NOT FOUND 我的自定义错误页面</h1>
 </html>
 `
 	tpl, err := template.New("404").Parse(page)

@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -127,4 +128,10 @@ type TestModel struct {
 	FirstName string
 	Age       int8
 	LastName  *sql.NullString
+}
+
+func TestTimer(t *testing.T) {
+	timer := time.NewTimer(0)
+	fmt.Println(timer.Stop())
+	<- timer.C
 }

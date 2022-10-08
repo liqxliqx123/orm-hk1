@@ -3,7 +3,8 @@ package errhdl
 import "gitee.com/geektime-geekbang/geektime-go/web"
 
 type MiddlewareBuilder struct {
-	resp map[int][]byte
+	resp     map[int][]byte
+	redirect map[int]string
 }
 
 func NewMiddlewareBuilder() *MiddlewareBuilder {

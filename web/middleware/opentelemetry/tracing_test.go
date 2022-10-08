@@ -31,6 +31,6 @@ func TestMiddlewareBuilder_Build(t *testing.T) {
 		ctx.RespData = []byte("hello, world")
 	})
 
-	s.Use((&MiddlewareBuilder{Tracer: tracer}).Build())
+	s.UseAny("/*", MiddlewareBuilder{Tracer: tracer}.Build())
 	s.Start(":8081")
 }

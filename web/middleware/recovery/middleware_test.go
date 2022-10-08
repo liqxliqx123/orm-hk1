@@ -18,7 +18,7 @@ func TestMiddlewareBuilder_Build(t *testing.T) {
 
 	s.Use((&MiddlewareBuilder{
 		StatusCode: 500,
-		ErrMsg:     "你 Panic 了",
+		ErrMsg:     "服务出小差了",
 		LogFunc: func(ctx *web.Context) {
 			log.Println(ctx.Req.URL.Path)
 		},

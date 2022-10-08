@@ -14,14 +14,14 @@ type MiddlewareBuilder struct {
 	Help        string
 }
 
-func (m *MiddlewareBuilder) Build() web.Middleware {
+func (m MiddlewareBuilder) Build() web.Middleware {
 	summaryVec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Name:        m.Name,
 		Subsystem:   m.Subsystem,
 		ConstLabels: m.ConstLabels,
 		Help:        m.Help,
 	}, []string{"pattern", "method", "status"})
-
+	prometheus.MustRegister(summaryVec)
 	return func(next web.HandleFunc) web.HandleFunc {
 		return func(ctx *web.Context) {
 			startTime := time.Now()

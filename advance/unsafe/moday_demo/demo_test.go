@@ -179,7 +179,7 @@ func NewSomeStructBuilder(fd1 string, fd2 int) *SomeStructBuilder {
 	}
 }
 
-// 中间方法，依旧返回 Builder
+// 中间方法，依旧返回 builder
 func (s *SomeStructBuilder) BuildField3(fd bool) *SomeStructBuilder {
 	s.field3 = fd
 	return s

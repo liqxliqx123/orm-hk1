@@ -23,7 +23,7 @@ func TestManager(t *testing.T) {
 			})),
 	}
 
-	s.Post("/login", func(ctx *web.Context) {
+	s.Get("/login", func(ctx *web.Context) {
 		// 前面就是你登录的时候一大堆的登录校验
 		id := uuid.New()
 		sess, err := m.InitSession(ctx, id.String())
@@ -48,7 +48,7 @@ func TestManager(t *testing.T) {
 		ctx.RespData = []byte(val)
 	})
 
-	s.Post("/logout", func(ctx *web.Context) {
+	s.Get("/logout", func(ctx *web.Context) {
 		_ = m.RemoveSession(ctx)
 	})
 

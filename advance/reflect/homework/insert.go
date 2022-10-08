@@ -1,3 +1,5 @@
+//go:build homework
+
 package homework
 
 import (
@@ -15,8 +17,8 @@ func InsertStmt(entity interface{}) (string, []interface{}, error) {
 	// 检测 entity 是否符合我们的要求
 	// 我们只支持有限的几种输入
 
-	// 使用 strings.Builder 来拼接 字符串
-	// bd := strings.Builder{}
+	// 使用 strings.builder 来拼接 字符串
+	// bd := strings.builder{}
 
 	// 构造 INSERT INTO XXX，XXX 是你的表名，这里我们直接用结构体名字
 

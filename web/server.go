@@ -3,6 +3,7 @@ package web
 import (
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type HandleFunc func(ctx *Context)
@@ -16,10 +17,11 @@ type Server interface {
 
 	// addRoute 注册一个路由
 	// method 是 HTTP 方法
-	addRoute(method string, path string, handler HandleFunc)
+	addRoute(method string, path string, handler HandleFunc, ms...Middleware)
 	// 我们并不采取这种设计方案
 	// addRoute(method string, path string, handlers... HandleFunc)
 }
+
 // 确保 HTTPServer 肯定实现了 Server 接口
 var _ Server = &HTTPServer{}
 
@@ -27,19 +29,16 @@ type ServerOption func(server *HTTPServer)
 
 type HTTPServer struct {
 	router
-	mdls []Middleware
 	tplEngine TemplateEngine
 }
 
-func NewHTTPServer(opts...ServerOption) *HTTPServer {
+func NewHTTPServer(opts ...ServerOption) *HTTPServer {
 	s := &HTTPServer{
 		router: newRouter(),
 	}
-
 	for _, opt := range opts {
 		opt(s)
 	}
-
 	return s
 }
 
@@ -49,44 +48,40 @@ func ServerWithTemplateEngine(engine TemplateEngine) ServerOption {
 	}
 }
 
-func (s *HTTPServer) Use(mdls...Middleware) {
-	if s.mdls == nil {
-		s.mdls = mdls
-		return
-	}
-	s.mdls = append(s.mdls, mdls...)
-}
+// func (s *HTTPServer) Use(mdls ...Middleware) {
+// 	if s.mdls == nil {
+// 		s.mdls = mdls
+// 		return
+// 	}
+// 	s.mdls = append(s.mdls, mdls...)
+// }
 
-// UseV1 会执行路由匹配，只有匹配上了的 mdls 才会生效
+// Use 会执行路由匹配，只有匹配上了的 mdls 才会生效
 // 这个只需要稍微改造一下路由树就可以实现
-func (s *HTTPServer) UseV1(path string, mdls...Middleware) {
-	panic("implement me")
+func (s *HTTPServer) Use(method, path string, mdls ...Middleware) {
+	s.addRoute(method, path, nil, mdls...)
 }
 
+// UseAny 这个名字确实不咋的
+func (s *HTTPServer) UseAny(path string, mdls ...Middleware) {
+	s.addRoute(http.MethodGet, path, nil, mdls...)
+	s.addRoute(http.MethodPost, path, nil, mdls...)
+	s.addRoute(http.MethodOptions, path, nil, mdls...)
+	s.addRoute(http.MethodConnect, path, nil, mdls...)
+	s.addRoute(http.MethodDelete, path, nil, mdls...)
+	s.addRoute(http.MethodHead, path, nil, mdls...)
+	s.addRoute(http.MethodPatch, path, nil, mdls...)
+	s.addRoute(http.MethodPut, path, nil, mdls...)
+	s.addRoute(http.MethodTrace, path, nil, mdls...)
+}
 // ServeHTTP HTTPServer 处理请求的入口
 func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	ctx := &Context{
-		Req:  request,
-		Resp: writer,
-		tplEngine:  s.tplEngine,
+		Req:       request,
+		Resp:      writer,
+		tplEngine: s.tplEngine,
 	}
-	// 最后一个应该是 HTTPServer 执行路由匹配，执行用户代码
-	root := s.serve
-	// 从后往前组装
-	for i := len(s.mdls) - 1; i >= 0; i -- {
-		root = s.mdls[i](root)
-	}
-	// 第一个应该是回写响应的
-	// 因为它在调用next之后才回写响应，
-	// 所以实际上 flashResp 是最后一个步骤
-	var m Middleware = func(next HandleFunc) HandleFunc {
-		return func(ctx *Context) {
-			next(ctx)
-			s.flashResp(ctx)
-		}
-	}
-	root = m(root)
-	root(ctx)
+	s.serve(ctx)
 }
 
 // Start 启动服务器
@@ -104,22 +99,42 @@ func (s *HTTPServer) Get(path string, handler HandleFunc) {
 
 func (s *HTTPServer) serve(ctx *Context) {
 	mi, ok := s.findRoute(ctx.Req.Method, ctx.Req.URL.Path)
-	if !ok || mi.n == nil || mi.n.handler == nil{
-		ctx.RespStatusCode = 404
-		return
-	}
 	ctx.PathParams = mi.pathParams
-	ctx.MatchedRoute = mi.n.route
-	mi.n.handler(ctx)
+	if mi.n != nil {
+		ctx.MatchedRoute = mi.n.route
+	}
+	// 最后一个应该是执行用户代码
+	var root HandleFunc = func(ctx *Context) {
+		if !ok || mi.n == nil || mi.n.handler == nil {
+			ctx.RespStatusCode = 404
+			return
+		}
+		mi.n.handler(ctx)
+	}
+	// 从后往前组装
+	for i := len(mi.mdls) - 1; i >= 0; i-- {
+		root = mi.mdls[i](root)
+	}
+	// 第一个应该是回写响应的
+	// 因为它在调用next之后才回写响应，
+	// 所以实际上 flashResp 是最后一个步骤
+	var m Middleware = func(next HandleFunc) HandleFunc {
+		return func(ctx *Context) {
+			next(ctx)
+			s.flashResp(ctx)
+		}
+	}
+	root = m(root)
+	root(ctx)
 }
 
 func (s *HTTPServer) flashResp(ctx *Context) {
 	if ctx.RespStatusCode > 0 {
 		ctx.Resp.WriteHeader(ctx.RespStatusCode)
 	}
+	ctx.Resp.Header().Set("Content-Length", strconv.Itoa(len(ctx.RespData)))
 	_, err := ctx.Resp.Write(ctx.RespData)
 	if err != nil {
 		log.Fatalln("回写响应失败", err)
 	}
 }
-

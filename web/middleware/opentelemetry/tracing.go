@@ -14,7 +14,7 @@ type MiddlewareBuilder struct {
 	Tracer trace.Tracer
 }
 
-func (b *MiddlewareBuilder) Build() web.Middleware {
+func (b MiddlewareBuilder) Build() web.Middleware {
 	if b.Tracer == nil {
 		b.Tracer = otel.GetTracerProvider().Tracer(defaultInstrumentationName)
 	}

@@ -30,7 +30,7 @@ type accessLog struct {
 	Path       string
 }
 
-func (b *MiddlewareBuilder) Build() web.Middleware {
+func (b MiddlewareBuilder) Build() web.Middleware {
 	return func(next web.HandleFunc) web.HandleFunc {
 		return func(ctx *web.Context) {
 			defer func() {

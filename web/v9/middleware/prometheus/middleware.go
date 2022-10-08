@@ -1,9 +1,7 @@
-//go:build v9
-
 package prometheus
 
 import (
-	web "gitee.com/geektime-geekbang/geektime-go/web/v9"
+	"gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
@@ -23,7 +21,7 @@ func (m *MiddlewareBuilder) Build() web.Middleware {
 		ConstLabels: m.ConstLabels,
 		Help:        m.Help,
 	}, []string{"pattern", "method", "status"})
-
+	prometheus.MustRegister(summaryVec)
 	return func(next web.HandleFunc) web.HandleFunc {
 		return func(ctx *web.Context) {
 			startTime := time.Now()

@@ -38,6 +38,13 @@ type Context struct {
 	UserValues map[string]any
 }
 
+// RespString 返回字符串作为响应
+func (c *Context) RespString(code int, msg string) error {
+	c.RespData = []byte(msg)
+	c.RespStatusCode = code
+	return nil
+}
+
 func (c *Context) BindJSON(val any) error {
 	if c.Req.Body == nil {
 		return errors.New("web: body 为 nil")
@@ -86,11 +93,24 @@ func (c *Context) RespJSON(code int, val any) error {
 	if err != nil {
 		return err
 	}
+	c.Resp.Header().Set("Content-Type", "application/json")
 	c.RespStatusCode = code
 	c.RespData = bs
 	return err
 }
 
+// RespServerError 会固定返回一个 500 的响应
+func (c *Context) RespServerError(msg string) error {
+	c.RespStatusCode = http.StatusInternalServerError
+	c.RespData = []byte(msg)
+	return nil
+}
+
+func (c *Context) RespOk(msg string) error {
+	c.RespStatusCode = http.StatusOK
+	c.RespData = []byte(msg)
+	return nil
+}
 func (c *Context) Render(tpl string, data any) error {
 	var err error
 	c.RespData, err = c.tplEngine.Render(c.Req.Context(), tpl, data)
@@ -123,6 +143,13 @@ func (s StringValue) ToInt64() (int64, error) {
 		return 0, s.err
 	}
 	return strconv.ParseInt(s.val, 10, 64)
+}
+
+func (s StringValue) ToUInt64() (uint64, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	return strconv.ParseUint(s.val, 10, 64)
 }
 
 // 不能用泛型

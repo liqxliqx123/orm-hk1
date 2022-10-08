@@ -94,7 +94,7 @@ func (f *FileUploader) HandleFunc(ctx *Context) {
 // 所以在 Middleware 里面将不能使用 RespData
 // 因为没有赋值
 type FileDownloader struct {
-	Dir        string
+	Dir string
 }
 
 func (f *FileDownloader) Handle() HandleFunc {
@@ -103,7 +103,7 @@ func (f *FileDownloader) Handle() HandleFunc {
 		path := filepath.Join(f.Dir, filepath.Clean(req))
 		fn := filepath.Base(path)
 		header := ctx.Resp.Header()
-		header.Set("Content-Disposition", "attachment;filename="+ fn)
+		header.Set("Content-Disposition", "attachment;filename="+fn)
 		header.Set("Content-Description", "File Transfer")
 		header.Set("Content-Type", "application/octet-stream")
 		header.Set("Content-Transfer-Encoding", "binary")
@@ -117,34 +117,32 @@ func (f *FileDownloader) Handle() HandleFunc {
 type StaticResourceHandlerOption func(h *StaticResourceHandler)
 
 type StaticResourceHandler struct {
-	dir string
-	pathPrefix string
+	dir                     string
 	extensionContentTypeMap map[string]string
 
 	// 缓存静态资源的限制
-	cache *lru.Cache
+	cache       *lru.Cache
 	maxFileSize int
 }
 
 type fileCacheItem struct {
-	fileName string
-	fileSize int
+	fileName    string
+	fileSize    int
 	contentType string
-	data []byte
+	data        []byte
 }
 
 func NewStaticResourceHandler(dir string, pathPrefix string,
-	options...StaticResourceHandlerOption) *StaticResourceHandler {
+	options ...StaticResourceHandlerOption) *StaticResourceHandler {
 	res := &StaticResourceHandler{
 		dir: dir,
-		pathPrefix: pathPrefix,
 		extensionContentTypeMap: map[string]string{
 			// 这里根据自己的需要不断添加
 			"jpeg": "image/jpeg",
-			"jpe": "image/jpeg",
-			"jpg": "image/jpeg",
-			"png": "image/png",
-			"pdf": "image/pdf",
+			"jpe":  "image/jpeg",
+			"jpg":  "image/jpeg",
+			"png":  "image/png",
+			"pdf":  "image/pdf",
 		},
 	}
 
@@ -153,6 +151,7 @@ func NewStaticResourceHandler(dir string, pathPrefix string,
 	}
 	return res
 }
+
 // WithFileCache 静态文件将会被缓存
 // maxFileSizeThreshold 超过这个大小的文件，就被认为是大文件，我们将不会缓存
 // maxCacheFileCnt 最多缓存多少个文件
@@ -202,10 +201,10 @@ func (h *StaticResourceHandler) Handle(ctx *Context) {
 		return
 	}
 	item := &fileCacheItem{
-		fileSize: len(data),
-		data: data,
+		fileSize:    len(data),
+		data:        data,
 		contentType: t,
-		fileName: req,
+		fileName:    req,
 	}
 
 	h.cacheFile(item)
@@ -237,7 +236,7 @@ func (h *StaticResourceHandler) readFileFromData(fileName string) (*fileCacheIte
 
 func getFileExt(name string) string {
 	index := strings.LastIndex(name, ".")
-	if index == len(name) - 1{
+	if index == len(name)-1 {
 		return ""
 	}
 	return name[index+1:]
