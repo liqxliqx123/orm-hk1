@@ -3,9 +3,11 @@ package orm
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"gitee.com/geektime-geekbang/geektime-go/orm/homework1/internal/errs"
 	"gitee.com/geektime-geekbang/geektime-go/orm/homework1/model"
 	"strings"
+	"unicode"
 )
 
 // Selector 用于构造 SELECT 语句
@@ -67,7 +69,35 @@ func (s *Selector[T]) Build() (*Query, error) {
 		}
 	}
 
-	panic("implement me")
+	if len(s.groupBy) > 0 {
+		s.sb.WriteString(" GROUP BY ")
+		err := s.buildGroupBy()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(s.having) > 0 {
+		s.sb.WriteString(" HAVING ")
+		err := s.buildPredicates(s.having)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(s.orderBy) > 0 {
+		s.sb.WriteString(" ORDER BY ")
+		err := s.buildOrderBy()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if s.limit != 0 {
+		s.buildLimit(s.limit)
+	}
+	if s.offset != 0 {
+		s.buildOffset(s.offset)
+	}
 
 	s.sb.WriteString(";")
 	return &Query{
@@ -91,12 +121,36 @@ func (s *Selector[T]) buildOrderBy() error {
 	return nil
 }
 
+func (s *Selector[T]) buildGroupBy() error {
+	for idx, ob := range s.groupBy {
+		if idx > 0 {
+			s.sb.WriteByte(',')
+		}
+		err := s.buildColumn(ob.name, "")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Selector[T]) buildOffset(offset int) {
+	s.sb.WriteString(" OFFSET ?")
+	s.addArgs(offset)
+}
+
+func (s *Selector[T]) buildLimit(limit int) {
+	s.sb.WriteString(" LIMIT ?")
+	s.addArgs(s.limit)
+}
+
 func (s *Selector[T]) buildPredicates(ps []Predicate) error {
 	p := ps[0]
 	for i := 1; i < len(ps); i++ {
 		p = p.And(ps[i])
 	}
-	return s.buildExpression(p)
+	isFirst := true
+	return s.buildExpression(p, isFirst)
 }
 
 func (s *Selector[T]) buildColumns() error {
@@ -158,8 +212,32 @@ func (s *Selector[T]) buildColumn(c string, alias string) error {
 	return nil
 }
 
-func (s *Selector[T]) buildExpression(e Expression) error {
-	panic("implement me")
+func (s *Selector[T]) buildExpression(e Expression, isFirst bool) error {
+	switch e.(type) {
+	case Predicate:
+		if !isFirst {
+			s.sb.WriteByte('(')
+		}
+		p := e.(Predicate)
+		s.buildExpression(p.left, false)
+		s.sb.WriteString(fmt.Sprintf(" %s ", p.op))
+		s.buildExpression(p.right, false)
+		if !isFirst {
+			s.sb.WriteByte(')')
+		}
+
+	case Column:
+		s.sb.WriteString(fmt.Sprintf("`%s`", underscoreName(e.(Column).name)))
+	case value:
+		s.sb.WriteString("?")
+		s.addArgs(e.(value).val)
+	case Aggregate:
+		a := e.(Aggregate)
+		s.sb.WriteString(fmt.Sprintf("%s(`%s`)", a.fn, a.arg))
+
+	}
+
+	return nil
 }
 
 // Where 用于构造 WHERE 查询条件。如果 ps 长度为 0，那么不会构造 WHERE 部分
@@ -271,9 +349,32 @@ type OrderBy struct {
 }
 
 func Asc(col string) OrderBy {
-	panic("implement me")
+	return OrderBy{
+		col:   col,
+		order: "ASC",
+	}
 }
 
 func Desc(col string) OrderBy {
-	panic("implement me")
+	return OrderBy{
+		col:   col,
+		order: "DESC",
+	}
+}
+
+// underscoreName 驼峰转字符串命名
+func underscoreName(tableName string) string {
+	var buf []byte
+	for i, v := range tableName {
+		if unicode.IsUpper(v) {
+			if i != 0 {
+				buf = append(buf, '_')
+			}
+			buf = append(buf, byte(unicode.ToLower(v)))
+		} else {
+			buf = append(buf, byte(v))
+		}
+
+	}
+	return string(buf)
 }

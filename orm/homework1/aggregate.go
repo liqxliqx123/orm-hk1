@@ -21,7 +21,16 @@ func (a Aggregate) As(alias string) Aggregate {
 
 // EQ 例如 C("id").Eq(12)
 func (a Aggregate) EQ(arg any) Predicate {
-	panic("implement me")
+	return Predicate{
+		left: Aggregate{
+			fn:  a.fn,
+			arg: underscoreName(a.arg),
+		},
+		op: opEQ,
+		right: value{
+			val: arg,
+		},
+	}
 }
 
 func (a Aggregate) LT(arg any) Predicate {

@@ -25,7 +25,8 @@ func StoreCacheToDBCallback(ctx context.Context) {
 		// 你的业务逻辑，比如说这里我们模拟的是将本地缓存刷新到数据库里面
 		// 这里我们简单的睡一段时间来模拟
 		log.Printf("刷新缓存中……")
-		time.Sleep(1 * time.Second)
+		time.Sleep(1)
+		done <- struct{}{}
 	}()
 	select {
 	case <-ctx.Done():
